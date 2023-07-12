@@ -3,14 +3,18 @@ const { Router } = require('express');
 const router = new Router();
 const bcryptjs = require('bcryptjs');
 const User = require('../models/User.model');
-const saltRounds = 10;
 
 // GET route ==> to display the signup form to users
-router.get('/', (req, res) => 
-    res.render('sign-up')
-);
+router.get('/', (req, res) => {
+  res.render('sign-up', { errorMessage: '' })
+});
 
-router.post('/', async (req, res, next) => {
+// GET route => to display the sign-in form to users
+router.get('/sign-in', (req, res) => {
+  res.render('sign-in', { errorMessage: '' });
+});
+
+router.post('/', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
         res.render('sign-up', { errorMessage: 'All fields are mandatory. Please provide your username and password.' });
@@ -26,16 +30,13 @@ router.post('/', async (req, res, next) => {
       }
 
     try {
-        const salt = await bcryptjs.genSalt(saltRounds);
-        const hashedPassword = await bcryptjs.hash(password, salt);
-        const userFromDB = await User.create({
-        username,
-        passwordHash: hashedPassword
-      });
-      res.send('Welcome!');
-   
+      const payload = { ...req.body};
+      delete payload.password;
+      const salt = bcryptjs.genSaltSync(10);
+      const hashedPassword = bcryptjs.hashSync(req.body.password, salt);
+      const userFromDB = await User.create({ username: username, password: hashedPassword });
+      res.render('sign-in');
       console.log('Newly created user is: ', userFromDB);
-   
       // Send response, etc.
     } catch(error) {
         if (error instanceof mongoose.Error.ValidationError) {
@@ -50,6 +51,4 @@ router.post('/', async (req, res, next) => {
     }
   });
   
-// POST route ==> to process form data
-
 module.exports = router;
